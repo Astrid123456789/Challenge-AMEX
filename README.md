@@ -39,7 +39,7 @@ This repo implements that idea while keeping preprocessing feasible under Colab 
 
 Challenge-AMEX-main/
 ├─ Data_Preprocessor.ipynb
-├─ Another_copy_of_Test_Meryem_Model.ipynb
+├─ Final_Model.ipynb
 └─ README.md
 
 ### Notebooks
@@ -48,7 +48,7 @@ Challenge-AMEX-main/
   - Converts large CSV files into **chunked Parquet** with explicit dtype handling.
   - Includes logic to build a **customer-level aggregated dataset** for training.
 
-- **`Another_copy_of_Test_Meryem_Model.ipynb`**
+- **`Final_Model.ipynb`**
   - Uses **Polars** for fast lazy scanning and aggregation.
   - Builds lag/diff features for selected “key features”.
   - Trains LightGBM (CV) and a final CatBoost model.
@@ -88,60 +88,49 @@ pip install polars catboost lightgbm
 
 ## Pipeline Summary
 
-### 1) CSV ➜ Parquet (Chunked, Memory-Optimized)
+### 1) Data Cleaning: Denoising & Parquet Conversion
 
-Implemented in `Data_Preprocessor.ipynb`.
+This stage (found in Data_Preprocessor.ipynb) is the "foundation" of the project. We convert the raw 50GB+ CSV data into a format that is small, clean, and fast.
 
-Key ideas:
+> What is being done:
 
-* Read CSV using `pandas.read_csv(..., chunksize=...)` to avoid loading the full dataset into RAM.
-* Apply **type normalization**:
+* Chunking: We read the CSV in blocks of 500,000 rows rather than all at once.
 
-  * Convert date column(s) to proper datetime
-  * Map the only two string categorical fields consistently:
+* Denoising (The Rounding Trick): We round all numerical features to 2 decimal places.
 
-    * `D_63` mapped via a fixed dictionary
-    * `D_64` mapped via a fixed dictionary
-  * Ensure other categorical columns are numeric and cast to compact integer dtypes (`int8`)
-  * Downcast numeric floats to `float32` to reduce memory
+* Downcasting: We change how numbers are stored (e.g., changing float64 to float32 and categories to int8).
 
-Outputs:
+* Parquet Conversion: The cleaned data is saved as .parquet files instead of .csv.
 
-* `train_parquet/part_00000.parquet`, `part_00001.parquet`, ...
-* `test_parquet/part_00000.parquet`, `part_00001.parquet`, ...
+> Why we do it:
 
-Why this matters:
+* Memory Efficiency: The raw AMEX dataset is too large for Google Colab's RAM. Downcasting reduces the memory footprint by over 50% without losing important information.
 
-* Parquet + dtype control dramatically reduces RAM usage and speeds up later scanning/aggregation.
+* Removing Noise: The original data contains tiny mathematical fluctuations (e.g., 0.5000001 vs 0.499999). These are "noise" that can confuse the model. Denoising rounds these values, helping the model find real patterns rather than chasing insignificant decimals.
+
+* Speed: Parquet is a "columnar" storage format. Unlike CSVs (which read row-by-row), Parquet allows the computer to skip columns it doesn't need, making data loading up to 10x faster.
 
 ---
 
 ### 2) Customer-Level Feature Engineering (Aggregation + Lags)
 
-Implemented across both notebooks (with a more scalable version using Polars in the training notebook).
+This stage compresses a customer's entire 13-month financial history into a single descriptive "summary card."
 
-**Aggregation concept (1 row per customer):**
+> What is being done:
 
-* For numeric features: compute a set of summary stats (the notebooks reference a plan such as mean/std/min/max/last).
-* For categorical features: retain last/most recent values (common in AMEX solutions).
+* Aggregation: For every customer, we calculate the Mean (average), Standard Deviation (volatility), Min/Max (extremes), and the Last (most recent) value for every feature.
 
-**Lag + diff features (Polars-based)**
-In `Another_copy_of_Test_Meryem_Model.ipynb`, additional temporal features are added for selected key columns:
+* Velocity (Diffs): We calculate the difference between the customer's first month and their last month.
 
-Key feature set (as coded):
+* Lags: we look back 1 or 2 months to see very recent changes.
 
-* `P_2`, `B_1`, `B_2`, `B_9`, `D_39`, `S_3`
+> Why we do it:
 
-For each of these, the notebook computes:
+* The Model's Perspective: Gradient Boosted Trees (LightGBM/CatBoost) cannot naturally "read" a 13-row history for one person. They need one row per customer. Aggregation provides this summary.
 
-* `*_lag_1`: previous statement value
-* `*_lag_2`: value two steps back
-* `*_diff_last_lag1`: last − lag_1 (a short-term change indicator)
+* Capturing Trajectory: A customer with a high balance that is decreasing is very different from a customer with a high balance that is increasing. By calculating Velocity (Last - First), we tell the model not just "where the customer is," but "where they are headed."
 
-Implementation notes:
-
-* Uses **Polars lazy API** (`scan_parquet`) + `group_by("customer_ID").agg(exprs)` for speed.
-* Handles short histories gracefully (lags can be null if not enough rows exist).
+* Static vs. Dynamic Health: Summary stats (Mean/Max) show the customer's general financial health, while Lags and Diffs show their immediate financial stress. Combining both gives the model a 360-degree view.
 
 ---
 
@@ -171,7 +160,7 @@ Saved artifact:
 
 ### 4) Inference + Submission
 
-Implemented in `Another_copy_of_Test_Meryem_Model.ipynb`.
+Implemented in `Final_Model.ipynb`.
 
 To avoid RAM issues:
 
@@ -251,7 +240,7 @@ Typical outputs produced by the full pipeline:
 2. Open and run:
 
    * `Data_Preprocessor.ipynb` (creates chunked Parquet)
-   * `Another_copy_of_Test_Meryem_Model.ipynb` (aggregates with lags, trains, predicts, exports submission)
+   * `Final_Model.ipynb` (aggregates with lags, trains, predicts, exports submission)
 
 You should end with:
 
