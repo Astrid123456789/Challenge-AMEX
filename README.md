@@ -37,12 +37,12 @@ This repo implements that idea while keeping preprocessing feasible under Colab 
 ---
 
 ## Repository Structure
-
+ ```
 Challenge-AMEX-main/
 ├─ Data_Preprocessor.ipynb
 ├─ Final_Model.ipynb
 └─ README.md
-
+```
 
 ### Notebooks
 
