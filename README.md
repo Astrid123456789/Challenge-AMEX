@@ -250,7 +250,7 @@ You should end with:
 
 # Learnings
 
-> 1. Why This Challenge Was Useful
+## 1. Why This Challenge Was Useful
 
 Scale: It forced a move away from standard "load everything into RAM (pandas dataframes)" workflows toward engineering-heavy solutions.
 
@@ -258,7 +258,7 @@ Domain Expertise: It provided insight into credit risk modeling—specifically h
 
 Metric Precision: The unique Amex metric (Gini + Top 4% Capture) taught us how to optimize for specific business goals rather than just generic accuracy.
 
-> 2. Problems & Challenges Encountered
+## 2. Problems & Challenges Encountered
 
 Data Scale (The Memory Wall): With over 50GB of raw data, a standard environment would crash instantly. Handling millions of customers across 13 months required a "chunked" mindset—reading, processing, and saving data in small bites to avoid RAM overflow.
 
@@ -266,7 +266,7 @@ Data Noise: The numerical features contained tiny fluctuations (e.g., balance va
 
 Temporal Complexity: Since customers have different history lengths (some 1 month, some 13), creating a consistent "summary" of their behavior without losing the sense of time (their trajectory) was difficult.
 
-> 3. New Skills & Techniques Acquired
+## 3. New Skills & Techniques Acquired
 
 Denoising & Compression: Learning the "rounding trick" to reduce data noise and using Downcasting (converting float64 to float32) to shrink the memory footprint.
 
