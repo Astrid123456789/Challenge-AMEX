@@ -154,6 +154,9 @@ The notebook indicates a “meta” approach where LightGBM helps inform the fin
 * LightGBM models are kept for generating auxiliary predictions.
 * CatBoost is trained as the final predictor and saved to disk.
 
+Rationale for model choice and evaluation:
+LightGBM was primarily used as a fast, strong baseline with cross-validation to validate feature usefulness and generalization under the AMEX evaluation metric. CatBoost was selected as the final model because of its robustness to noisy numerical features, its ability to model complex non-linear interactions, and its stable performance on tabular credit-risk data. Model performance was assessed using the official AMEX metric (Gini + Top-4% capture), ensuring alignment with the competition’s business objective rather than generic accuracy.
+
 Saved artifact:
 
 * `catboost_meta.cbm`
@@ -273,3 +276,7 @@ Denoising & Compression: Learning the "rounding trick" to reduce data noise and 
 Efficient Formats: Moving away from CSVs to Parquets, which allow for lightning-fast, columnar data processing.
 
 Feature Velocity: Developing "Difference Features" (Last - First) to capture whether a customer's financial health is trending up or down.
+
+## 4. Why the Final Technical Solution Was Effective
+
+The final solution proved effective because it balanced information retention, computational feasibility, and model expressiveness under strict memory constraints. By compressing raw time-series data into customer-level aggregated and velocity-based features, the pipeline preserved the most predictive temporal signals while remaining compatible with tree-based models. The combination of efficient Parquet storage, carefully engineered summary features, and a robust gradient-boosted model (CatBoost) allowed the system to scale to tens of millions of rows without sacrificing predictive power. This end-to-end design closely mirrors real-world credit-risk pipelines, where performance must coexist with operational constraints.
